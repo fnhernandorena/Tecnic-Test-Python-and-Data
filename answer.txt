@@ -1,0 +1,65 @@
+I use MySQL and WampServer.
+
+*) Create table Bansur =>
+
+CREATE TABLE transacciones_bansur (
+    TARJETA INT(20),
+    TIPO_TRX VARCHAR(10),
+    MONTO DECIMAL(10, 2),
+    FECHA_TRANSACCION DATE,
+    CODIGO_AUTORIZACION INT(20),
+    ID_ADQUIRIENTE INT(20),
+    FECHA_RECEPCION DATE
+);
+
+*) Create table Clap =>
+
+CREATE TABLE transacciones_clap (
+    INICIO6_TARJETA INT(10),
+    FINAL4_TARJETA INT(10),
+    TIPO_TRX VARCHAR(20),
+    MONTO DECIMAL(10, 2),
+    FECHA_TRANSACCION DATETIME,
+    CODIGO_AUTORIZACION INT(20),
+    ID_BANCO INT(20),
+    FECHA_RECEPCION_BANCO DATE
+);
+
+*) I import csv files with phpMyAdmin but can use this =>
+
+LOAD DATA INFILE "C:\Users\Asus\Desktop\Prueba Técnica\CLAP.csv"
+INTO TABLE transacciones_clap
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS;
+
+
+*) Question 1 =>
+
+SELECT COUNT(*) AS cantidad_transacciones, SUM(MONTO) AS monto_total FROM transacciones_clap WHERE ID_BANCO IN ( SELECT ID_BANCO FROM ( SELECT ID_BANCO, ROW_NUMBER() OVER (PARTITION BY ID_BANCO ORDER BY FECHA_TRANSACCION DESC) AS row_num FROM transacciones_clap WHERE TIPO_TRX = 'PAGADA' ) AS t WHERE row_num = 1 );
+
+cantidad_transacciones = 163493
+monto_total = 73716119.60
+
+*) Question 2 =>
+
+SELECT COUNT(*) AS cantidad_transacciones, SUM(MONTO) AS monto_total FROM transacciones_bansur WHERE ID_ADQUIRIENTE IN ( SELECT ID_ADQUIRIENTE FROM ( SELECT ID_ADQUIRIENTE, ROW_NUMBER() OVER (PARTITION BY ID_ADQUIRIENTE ORDER BY FECHA_TRANSACCION DESC) AS row_num FROM transacciones_bansur WHERE TIPO_TRX = 'PAGO' ) AS t WHERE row_num = 1 );
+
+cantidad_transacciones = 132396
+monto_total = 53977030.03
+
+*) Question 3 =>
+
+SELECT COUNT(*) AS cantidad_transacciones, SUM(MONTO) AS monto_total FROM transacciones_bansur WHERE ID_ADQUIRIENTE IN ( SELECT ID_ADQUIRIENTE FROM ( SELECT ID_ADQUIRIENTE, ROW_NUMBER() OVER (PARTITION BY ID_ADQUIRIENTE ORDER BY FECHA_TRANSACCION DESC) AS row_num FROM transacciones_bansur ) AS t WHERE row_num = 1 );
+
+cantidad_transacciones = 132396
+monto_total = 53977030.03
+
+SELECT COUNT(*) AS cantidad_transacciones, SUM(MONTO) AS monto_total FROM transacciones_clap WHERE ID_BANCO IN ( SELECT ID_BANCO FROM ( SELECT ID_BANCO, ROW_NUMBER() OVER (PARTITION BY ID_BANCO ORDER BY FECHA_TRANSACCION DESC) AS row_num FROM transacciones_clap ) AS t WHERE row_num = 1 );
+
+cantidad_transacciones = 163549
+monto_total = 73736800.92
+
+/// Podemos ver a simple vista 3 cosas, la primera es que hay una especie de delay entre la base de datos de el banco y la base de datos de clap. La segunda es que comprobamos que las transacciones que llegan al banco son todas pagas ya que no varia ni el monto recaudado ni las transacciones y la tercera es que las transacciones que se efectuan en clap no son todas pagas y hay una diferencia de $200.000.
+
+*) Question 4
